@@ -4,26 +4,26 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import dotenv from 'dotenv';
+import DatabaseConnection from './db/connection.js';
+import { TOOLS, handleToolCall } from './tools/index.js';
 
-const HELLO_TOOL = {
-  name: "sayHello",
-  description: "A simple tool that says hello",
-  inputSchema: {
-    type: "object",
-    properties: {
-      name: {
-        type: "string",
-        description: "Name to greet"
-      }
-    },
-    required: ["name"]
-  }
+dotenv.config();
+
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_DATABASE || 'mcp_test'
 };
+
+export const db = new DatabaseConnection(dbConfig);
 
 const server = new Server(
   {
-    name: "hello-world-mcp",
-    version: "1.0.0",
+    name: "database-mcp",
+    version: "2.0.0",
   },
   {
     capabilities: {
@@ -33,28 +33,37 @@ const server = new Server(
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [HELLO_TOOL]
+  tools: TOOLS
 }));
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name === "sayHello") {
-    const name = request.params.arguments?.name as string;
+  try {
+    const result = await handleToolCall(request.params.name, request.params.arguments);
     return {
       content: [
         {
           type: "text",
-          text: `Hello, ${name}! Welcome to the MCP server.`
+          text: JSON.stringify(result, null, 2)
         }
       ]
     };
+  } catch (error: any) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Error: ${error.message}`
+        }
+      ],
+      isError: true
+    };
   }
-  throw new Error(`Unknown tool: ${request.params.name}`);
 });
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Hello World MCP server running on stdio");
+  console.error("Database MCP server running on stdio");
 }
 
 main().catch((error) => {
