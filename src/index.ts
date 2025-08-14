@@ -3,12 +3,18 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import dotenv from 'dotenv';
 import DatabaseConnection from './db/connection.js';
 import { TOOLS, handleToolCall } from './tools/index.js';
+import fs from 'fs';
+import path from 'path';
 
-dotenv.config();
+// dotenv.config();
 
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
@@ -27,7 +33,9 @@ const server = new Server(
   },
   {
     capabilities: {
-      tools: {}
+      tools: {},
+      prompts: {},
+      resources: {}
     }
   }
 );
@@ -58,6 +66,147 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       isError: true
     };
   }
+});
+
+server.setRequestHandler(ListPromptsRequestSchema, async () => ({
+  prompts: [
+    {
+      name: "query-employees",
+      title: "Query_Employees",
+      description: "Query employees table using natural language instructions",
+      arguments: [
+        {
+          name: "instructions",
+          description: "Natural language query instructions (e.g., 'count female employees', 'show 10 recent hires')",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "insert-employee",
+      title: "Insert_Employee",
+      description: "Insert a new employee with all related information (department, title, salary)",
+      arguments: [
+        {
+          name: "employee_info",
+          description: "Employee details including name, birth date, gender, department, title, and salary",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "delete-employee",
+      title: "Delete_Employee",
+      description: "Delete an employee and all related records from the database",
+      arguments: [
+        {
+          name: "employee_identifier",
+          description: "Employee number or name to delete (e.g., '10001' or 'John Smith')",
+          required: true
+        }
+      ]
+    },
+    {
+      name: "manage-departments",
+      title: "Manage_Departments",
+      description: "Insert a new department or delete an existing department",
+      arguments: [
+        {
+          name: "instructions",
+          description: "Department operation (e.g., 'add Marketing department', 'delete department d005')",
+          required: true
+        }
+      ]
+    }
+  ]
+}));
+
+server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  if (request.params.name === "query-employees") {
+    const promptPath = path.join(__dirname, 'specs', 'query-employees.md');
+    const promptContent = fs.readFileSync(promptPath, 'utf-8');
+    
+    const userInstructions = request.params.arguments?.instructions || "";
+    const messages = [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: promptContent.replace('$ARGUMENTS', userInstructions)
+        }
+      }
+    ];
+    
+    return {
+      description: "Query employees table using natural language instructions",
+      messages
+    };
+  }
+  
+  if (request.params.name === "insert-employee") {
+    const promptPath = path.join(__dirname, 'specs', 'insert-employee-info.md');
+    const promptContent = fs.readFileSync(promptPath, 'utf-8');
+    
+    const employeeInfo = request.params.arguments?.employee_info || "";
+    const messages = [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: promptContent.replace('$ARGUMENTS', employeeInfo)
+        }
+      }
+    ];
+    
+    return {
+      description: "Insert a new employee with all related information",
+      messages
+    };
+  }
+  
+  if (request.params.name === "delete-employee") {
+    const promptPath = path.join(__dirname, 'specs', 'delete-employee.md');
+    const promptContent = fs.readFileSync(promptPath, 'utf-8');
+    
+    const employeeIdentifier = request.params.arguments?.employee_identifier || "";
+    const messages = [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: promptContent.replace('$ARGUMENTS', employeeIdentifier)
+        }
+      }
+    ];
+    
+    return {
+      description: "Delete an employee and all related records",
+      messages
+    };
+  }
+  
+  if (request.params.name === "manage-departments") {
+    const promptPath = path.join(__dirname, 'specs', 'manage-departments.md');
+    const promptContent = fs.readFileSync(promptPath, 'utf-8');
+    
+    const instructions = request.params.arguments?.instructions || "";
+    const messages = [
+      {
+        role: "user" as const,
+        content: {
+          type: "text" as const,
+          text: promptContent.replace('$ARGUMENTS', instructions)
+        }
+      }
+    ];
+    
+    return {
+      description: "Manage departments (insert or delete)",
+      messages
+    };
+  }
+  
+  throw new Error(`Unknown prompt: ${request.params.name}`);
 });
 
 async function main() {
