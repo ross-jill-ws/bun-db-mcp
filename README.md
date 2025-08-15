@@ -8,6 +8,8 @@ A high-performance Model Context Protocol (MCP) server built with Bun and TypeSc
 - **🔍 Safe Query Execution** - Execute SELECT queries with parameterized statements
 - **📝 CRUD Operations** - Create, Read, Update, and Delete records securely
 - **📊 Schema Inspection** - Read database schema and table structures
+- **🤖 MCP Prompts** - Pre-built prompts for common database operations
+- **📚 MCP Resources** - Access database documentation and schema information
 - **🛡️ SQL Injection Prevention** - Built-in validation and sanitization
 - **⚡ Built with Bun** - Lightning-fast runtime and package management
 - **🔒 Environment-based Configuration** - Secure credential management
@@ -113,6 +115,39 @@ The server provides six powerful tools for database operations:
 }
 ```
 
+### Available Prompts
+
+The server provides pre-built prompts for common database operations:
+
+#### 1. **query-employees** - Natural Language Queries
+Query the employees table using natural language instructions.
+- **Arguments**: `instructions` - e.g., "count female employees", "show 10 recent hires"
+
+#### 2. **insert-employee** - Add New Employee
+Insert a new employee with all related information (department, title, salary).
+- **Arguments**: `employee_info` - Employee details in natural language
+
+#### 3. **delete-employee** - Remove Employee
+Delete an employee and all related records from the database.
+- **Arguments**: `employee_identifier` - Employee number or name
+
+#### 4. **manage-departments** - Department Operations
+Insert a new department or delete an existing department.
+- **Arguments**: `instructions` - e.g., "add Marketing department", "delete department d005"
+
+### Available Resources
+
+The server exposes the following MCP resources:
+
+#### **bun-db-mcp://general-database** - Database Schema Documentation
+- **Type**: `text/markdown`
+- **Description**: Complete documentation of the employee database schema including:
+  - Table structures and columns
+  - Entity relationships
+  - Key design patterns
+  - Common query patterns
+  - Mermaid ER diagram
+
 ## 🧪 Testing
 
 Run the test suite:
@@ -140,9 +175,19 @@ To use with Claude Desktop or other MCP clients, add to your configuration:
 ```json
 {
   "mcpServers": {
-    "database": {
+    "bun-db-mcp": {
       "command": "bun",
-      "args": ["run", "/path/to/bun-db-mcp/src/index.ts"]
+      "args": [
+        "run",
+        "<root path>/src/index.ts"
+      ],
+      "env": {
+        "DB_HOST": "127.0.0.1",
+        "DB_PORT": "3306",
+        "DB_USER": "root",
+        "DB_PASSWORD": "<your_password>",
+        "DB_DATABASE": "employees"
+      }
     }
   }
 }
@@ -169,6 +214,12 @@ bun-db-mcp/
 │   │   └── types.ts       # TypeScript type definitions
 │   ├── tools/
 │   │   └── index.ts       # Tool implementations
+│   ├── specs/
+│   │   ├── database-schema.md     # Database schema documentation
+│   │   ├── query-employees.md     # Query prompt specification
+│   │   ├── insert-employee-info.md # Insert prompt specification
+│   │   ├── delete-employee.md     # Delete prompt specification
+│   │   └── manage-departments.md  # Department management prompt
 │   └── utils/
 │       └── validation.ts  # Input validation & sanitization
 ├── tests/
