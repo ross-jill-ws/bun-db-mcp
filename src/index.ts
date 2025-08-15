@@ -209,6 +209,36 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
   throw new Error(`Unknown prompt: ${request.params.name}`);
 });
 
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: "bun-db-mcp://general-database",
+      name: "Database Schema",
+      description: "Complete documentation of the employee database schema including tables, relationships, and query patterns",
+      mimeType: "text/markdown"
+    }
+  ]
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "bun-db-mcp://general-database") {
+    const schemaPath = path.join(__dirname, 'specs', 'database-schema.md');
+    const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+    
+    return {
+      contents: [
+        {
+          uri: request.params.uri,
+          mimeType: "text/markdown",
+          text: schemaContent
+        }
+      ]
+    };
+  }
+  
+  throw new Error(`Unknown resource: ${request.params.uri}`);
+});
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
