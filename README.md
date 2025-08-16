@@ -2,6 +2,12 @@
 
 A high-performance Model Context Protocol (MCP) server built with Bun and TypeScript, providing secure database operations for MySQL databases. This server enables AI assistants to safely interact with MySQL databases through a standardized protocol.
 
+## 📹 Introduction Video
+
+Watch this comprehensive tutorial to understand MCP Prompts & Resources by building the bun-db-mcp server:
+
+[![Understand MCP Prompts & Resources by building bun-db-mcp](https://img.youtube.com/vi/SG07c8snBcw/0.jpg)](https://www.youtube.com/watch?v=SG07c8snBcw "Understand MCP Prompts & Resources by building bun-db-mcp")
+
 ## ✨ Features
 
 - **🔌 Database Connection Management** - Connect, disconnect, and check connection status
