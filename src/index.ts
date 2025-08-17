@@ -246,17 +246,17 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    transport: 'stdio' as 'stdio' | 'sse',
+    transport: 'stdio' as 'stdio' | 'sse' | 'http',
     port: 3100
   };
   
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--transport' && args[i + 1]) {
       const transportValue = args[i + 1].toLowerCase();
-      if (transportValue === 'stdio' || transportValue === 'sse') {
+      if (transportValue === 'stdio' || transportValue === 'sse' || transportValue === 'http') {
         options.transport = transportValue;
       } else {
-        console.error(`Invalid transport option: ${args[i + 1]}. Use 'stdio' or 'sse'`);
+        console.error(`Invalid transport option: ${args[i + 1]}. Use 'stdio', 'sse', or 'http'`);
         process.exit(1);
       }
       i++;
@@ -588,11 +588,16 @@ async function startSSEServer(port: number) {
   });
 }
 
+// Note: startHTTPServer moved to separate file to avoid circular imports
+import { startHTTPServer } from './startHTTPServer.js';
+
 async function main() {
   const options = parseArgs();
   
   if (options.transport === 'sse') {
     await startSSEServer(options.port);
+  } else if (options.transport === 'http') {
+    await startHTTPServer(options.port);
   } else {
     const transport = new StdioServerTransport();
     await server.connect(transport);
