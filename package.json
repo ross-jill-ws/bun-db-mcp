@@ -8,7 +8,8 @@
     "test": "bun test",
     "test:db": "bun test tests/db.test.ts",
     "test:tools": "bun test tests/tools.test.ts",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "build": "bun build --outfile=dist/run.js --target=node ./src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
