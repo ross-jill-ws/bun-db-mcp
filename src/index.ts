@@ -247,7 +247,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     transport: 'stdio' as 'stdio' | 'sse',
-    port: 3000
+    port: 3100
   };
   
   for (let i = 0; i < args.length; i++) {
@@ -285,7 +285,7 @@ async function startSSEServer(port: number) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    
+
     if (req.method === 'OPTIONS') {
       res.writeHead(200);
       res.end();

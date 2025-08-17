@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
+    "start-sse": "bun run src/index.ts --transport sse",
     "dev": "bun --watch src/index.ts",
     "test": "bun test",
     "test:db": "bun test tests/db.test.ts",
