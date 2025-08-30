@@ -2,11 +2,13 @@
 
 A high-performance Model Context Protocol (MCP) server built with Bun and TypeScript, providing secure database operations for MySQL databases. This server enables AI assistants to safely interact with MySQL databases through a standardized protocol.
 
-## 📹 Introduction Video
+## 📹 Video Tutorials
 
-Watch this comprehensive tutorial to understand MCP Prompts & Resources by building the bun-db-mcp server:
+Watch these comprehensive tutorials to understand MCP development:
 
+[![How to build a DB MCP server in 15 minutes](https://img.youtube.com/vi/hX7I-YSGwNQ/0.jpg)](https://www.youtube.com/watch?v=hX7I-YSGwNQ "How to build a DB MCP server in 15 minutes")
 [![Understand MCP Prompts & Resources by building bun-db-mcp](https://img.youtube.com/vi/SG07c8snBcw/0.jpg)](https://www.youtube.com/watch?v=SG07c8snBcw "Understand MCP Prompts & Resources by building bun-db-mcp")
+[![Master MCP Transports In 20 Minutes - STDIO,HTTP,SSE](https://img.youtube.com/vi/Z3tZxZTXSws/0.jpg)](https://www.youtube.com/watch?v=Z3tZxZTXSws "Master MCP Transports In 20 Minutes - STDIO,HTTP,SSE")
 
 ## ✨ Features
 
@@ -55,11 +57,53 @@ DB_DATABASE=your_database
 
 ## 🚀 Usage
 
+### Transport Options
+
+The MCP server supports three different transport protocols:
+
+#### 1. **STDIO Transport** (Default)
+Standard input/output communication for MCP clients like Claude Desktop:
+```bash
+bun run src/index.ts
+# or
+bun run src/index.ts --transport stdio
+```
+
+#### 2. **SSE Transport** (Server-Sent Events)
+HTTP-based transport using Server-Sent Events for real-time streaming:
+```bash
+bun run src/index.ts --transport sse --port 3100
+```
+- **Endpoints**: 
+  - `GET http://localhost:3100/mcp` - Establish SSE stream
+  - `POST http://localhost:3100/messages` - Send JSON-RPC requests
+- **Session Management**: Via `sessionId` query parameter
+
+#### 3. **HTTP Transport** (StreamableHTTP)
+Modern HTTP transport supporting both JSON and SSE responses:
+```bash
+bun run src/index.ts --transport http --port 3100
+```
+- **Endpoint**: `GET/POST http://localhost:3100/mcp`
+- **Session Management**: Via `Mcp-Session-Id` header
+- **Response Formats**:
+  - JSON: `Accept: application/json, text/event-stream`
+  - SSE: `Accept: text/event-stream, application/json`
+
 ### Starting the Server
 
-Run the MCP server:
+Run with default STDIO transport:
 ```bash
 bun run start
+```
+
+Run with specific transport:
+```bash
+# SSE transport
+bun run src/index.ts --transport sse --port 3100
+
+# HTTP transport  
+bun run src/index.ts --transport http --port 3100
 ```
 
 For development with auto-reload:
@@ -176,6 +220,7 @@ bun test:watch
 
 ### MCP Client Configuration
 
+#### STDIO Transport (Claude Desktop)
 To use with Claude Desktop or other MCP clients, add to your configuration:
 
 ```json
@@ -185,7 +230,9 @@ To use with Claude Desktop or other MCP clients, add to your configuration:
       "command": "bun",
       "args": [
         "run",
-        "<root path>/src/index.ts"
+        "<root path>/src/index.ts",
+        "--transport",
+        "stdio"
       ],
       "env": {
         "DB_HOST": "127.0.0.1",
@@ -197,6 +244,37 @@ To use with Claude Desktop or other MCP clients, add to your configuration:
     }
   }
 }
+```
+
+#### HTTP/SSE Transport (Web Clients)
+For HTTP-based transports, use curl or web clients:
+
+**SSE Transport Example:**
+```bash
+# Establish SSE stream
+curl -N -H "Accept: text/event-stream" \
+  http://localhost:3100/mcp
+
+# Send requests (in another terminal)
+curl -X POST http://localhost:3100/messages?sessionId=<session-id> \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+```
+
+**HTTP Transport Example:**
+```bash
+# JSON response
+curl -X POST http://localhost:3100/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+
+# SSE response
+curl -X POST http://localhost:3100/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream, application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' \
+  --no-buffer
 ```
 
 ### Environment Variables
@@ -214,7 +292,12 @@ To use with Claude Desktop or other MCP clients, add to your configuration:
 ```
 bun-db-mcp/
 ├── src/
-│   ├── index.ts           # Main MCP server
+│   ├── index.ts           # Main MCP server with transport selection
+│   ├── handlers.ts        # Shared MCP request handlers
+│   ├── transports/        # Transport implementations
+│   │   ├── stdio.ts       # STDIO transport (default)
+│   │   ├── sse.ts         # Server-Sent Events transport
+│   │   └── http.ts        # StreamableHTTP transport with SSE support
 │   ├── db/
 │   │   ├── connection.ts  # Database connection manager
 │   │   └── types.ts       # TypeScript type definitions
