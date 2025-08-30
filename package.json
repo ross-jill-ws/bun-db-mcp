@@ -6,6 +6,7 @@
     "start-stdio": "bun run src/index.ts --transport stdio",
     "start-sse": "bun run src/index.ts --transport sse",
     "start-http": "bun run src/index.ts --transport http",
+    "debug-http": "ts-node-esm src/index.ts --transport http",
     "dev": "bun --watch src/index.ts",
     "test": "bun test",
     "test:db": "bun test tests/db.test.ts",
