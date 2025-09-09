@@ -19,7 +19,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     transport: 'stdio' as 'stdio' | 'sse' | 'http',
-    port: 3100
+    port: 3000
   };
   
   for (let i = 0; i < args.length; i++) {

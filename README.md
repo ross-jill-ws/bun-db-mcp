@@ -9,6 +9,7 @@ Watch these comprehensive tutorials to understand MCP development:
 [![How to build a DB MCP server in 15 minutes](https://img.youtube.com/vi/hX7I-YSGwNQ/0.jpg)](https://www.youtube.com/watch?v=hX7I-YSGwNQ "How to build a DB MCP server in 15 minutes")
 [![Understand MCP Prompts & Resources by building bun-db-mcp](https://img.youtube.com/vi/SG07c8snBcw/0.jpg)](https://www.youtube.com/watch?v=SG07c8snBcw "Understand MCP Prompts & Resources by building bun-db-mcp")
 [![Master MCP Transports In 20 Minutes - STDIO,HTTP,SSE](https://img.youtube.com/vi/Z3tZxZTXSws/0.jpg)](https://www.youtube.com/watch?v=Z3tZxZTXSws "Master MCP Transports In 20 Minutes - STDIO,HTTP,SSE")
+[![MCP Server Authorization Demystified! Step-by-Step Guide with code](https://img.youtube.com/vi/O7SVscyjTqY/0.jpg)](https://youtu.be/O7SVscyjTqY "MCP Server Authorization Demystified! Step-by-Step Guide with code")
 
 ## ✨ Features
 
@@ -72,23 +73,31 @@ bun run src/index.ts --transport stdio
 #### 2. **SSE Transport** (Server-Sent Events)
 HTTP-based transport using Server-Sent Events for real-time streaming:
 ```bash
-bun run src/index.ts --transport sse --port 3100
+bun run src/index.ts --transport sse --port 3000
 ```
 - **Endpoints**: 
-  - `GET http://localhost:3100/mcp` - Establish SSE stream
-  - `POST http://localhost:3100/messages` - Send JSON-RPC requests
+  - `GET http://localhost:3000/mcp` - Establish SSE stream
+  - `POST http://localhost:3000/messages` - Send JSON-RPC requests
 - **Session Management**: Via `sessionId` query parameter
 
-#### 3. **HTTP Transport** (StreamableHTTP)
-Modern HTTP transport supporting both JSON and SSE responses:
+#### 3. **HTTP Transport** (StreamableHTTP with OAuth)
+Modern HTTP transport with OAuth authentication supporting both JSON and SSE responses:
 ```bash
-bun run src/index.ts --transport http --port 3100
+bun run src/index.ts --transport http --port 3000 --oauth
 ```
-- **Endpoint**: `GET/POST http://localhost:3100/mcp`
+- **MCP Endpoint**: `GET/POST http://localhost:3000/mcp`
+- **Auth Server**: `http://localhost:3001` (OAuth provider with demo flows)
 - **Session Management**: Via `Mcp-Session-Id` header
+- **Authentication**: Bearer token required in `Authorization` header
 - **Response Formats**:
   - JSON: `Accept: application/json, text/event-stream`
   - SSE: `Accept: text/event-stream, application/json`
+
+**Authentication Flow:**
+1. OAuth server runs on port 3001 with demo authentication flows
+2. Supports both in-memory demo provider and Google OAuth
+3. MCP server validates Bearer tokens for protected resources
+4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` environment variables for Google OAuth
 
 ### Starting the Server
 
@@ -100,10 +109,13 @@ bun run start
 Run with specific transport:
 ```bash
 # SSE transport
-bun run src/index.ts --transport sse --port 3100
+bun run src/index.ts --transport sse --port 3000
 
-# HTTP transport  
-bun run src/index.ts --transport http --port 3100
+# HTTP transport with OAuth
+bun run src/index.ts --transport http --port 3000 --oauth
+
+# HTTP transport without OAuth (not recommended)
+bun run src/index.ts --transport http --port 3000
 ```
 
 For development with auto-reload:
@@ -253,26 +265,33 @@ For HTTP-based transports, use curl or web clients:
 ```bash
 # Establish SSE stream
 curl -N -H "Accept: text/event-stream" \
-  http://localhost:3100/mcp
+  http://localhost:3000/mcp
 
 # Send requests (in another terminal)
-curl -X POST http://localhost:3100/messages?sessionId=<session-id> \
+curl -X POST http://localhost:3000/messages?sessionId=<session-id> \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 ```
 
-**HTTP Transport Example:**
+**HTTP Transport with OAuth Example:**
 ```bash
-# JSON response
-curl -X POST http://localhost:3100/mcp \
+# First, get an access token from the auth server
+curl -X POST http://localhost:3001/oauth/token \
+  -H "Content-Type: application/json" \
+  -d '{"grant_type": "client_credentials", "client_id": "demo-client", "client_secret": "demo-secret"}'
+
+# Use the token to make MCP requests
+curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
+  -H "Authorization: Bearer <access-token>" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
 
-# SSE response
-curl -X POST http://localhost:3100/mcp \
+# SSE response with authentication
+curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream, application/json" \
+  -H "Authorization: Bearer <access-token>" \
   -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}' \
   --no-buffer
 ```
@@ -286,6 +305,8 @@ curl -X POST http://localhost:3100/mcp \
 | `DB_USER` | Database user | `root` |
 | `DB_PASSWORD` | Database password | - |
 | `DB_DATABASE` | Database name | `mcp_test` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID (optional) | - |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (optional) | - |
 
 ## 🏗️ Project Structure
 
@@ -297,7 +318,10 @@ bun-db-mcp/
 │   ├── transports/        # Transport implementations
 │   │   ├── stdio.ts       # STDIO transport (default)
 │   │   ├── sse.ts         # Server-Sent Events transport
-│   │   └── http.ts        # StreamableHTTP transport with SSE support
+│   │   └── http.ts        # StreamableHTTP transport with OAuth support
+│   ├── auth/              # OAuth authentication providers
+│   │   ├── demoInMemoryOAuthProvider.ts  # Demo OAuth provider
+│   │   └── googleOAuthProvider.ts        # Google OAuth provider
 │   ├── db/
 │   │   ├── connection.ts  # Database connection manager
 │   │   └── types.ts       # TypeScript type definitions
@@ -320,11 +344,14 @@ bun-db-mcp/
 
 ## 🔒 Security Features
 
+- **OAuth Authentication** - Bearer token authentication for HTTP transport
+- **Protected Resources** - Access control for sensitive database operations
 - **Parameterized Queries** - All queries use prepared statements to prevent SQL injection
 - **Input Validation** - Table and column names are validated against strict patterns
 - **Identifier Escaping** - Database identifiers are properly escaped
 - **SELECT-only Queries** - Query tool restricted to SELECT statements only
 - **Environment Variables** - Sensitive credentials stored in environment files
+- **CORS Protection** - Configurable cross-origin resource sharing policies
 
 ## 🤝 Contributing
 
