@@ -56,6 +56,33 @@ DB_PASSWORD=your_password
 DB_DATABASE=your_database
 ```
 
+4. Initialize the database with sample data:
+
+The repository includes an `simple_import_employees.sql` file with sample employee data. Import it using one of these methods.
+
+**Option 1: Using mysql command-line client:**
+```bash
+mysql -u your_user -p your_database < simple_import_employees.sql
+```
+
+**Option 2: From within MySQL client:**
+```bash
+mysql -u your_user -p your_database
+```
+Then run:
+```sql
+source simple_import_employees.sql;
+```
+
+**Option 3: Using mysqldump (for backup/restore):**
+```bash
+# To export (backup)
+mysqldump -u your_user -p your_database > backup.sql
+
+# To import (restore)
+mysql -u your_user -p your_database < backup.sql
+```
+
 ## 🚀 Usage
 
 ### Transport Options
@@ -137,18 +164,22 @@ The server provides six powerful tools for database operations:
 #### 2. **query** - Execute SELECT Queries
 ```json
 {
-  "sql": "SELECT * FROM users WHERE age > ?",
-  "params": [18]
+  "sql": "SELECT * FROM employees WHERE hire_date > ?",
+  "params": ["2000-01-01"]
 }
 ```
 
 #### 3. **create** - Insert Records
 ```json
 {
-  "table": "users",
+  "table": "employees",
   "data": {
-    "name": "John Doe",
-    "email": "john@example.com"
+    "emp_no": 500000,
+    "birth_date": "1990-05-15",
+    "first_name": "John",
+    "last_name": "Doe",
+    "gender": "M",
+    "hire_date": "2024-01-15"
   }
 }
 ```
@@ -156,24 +187,24 @@ The server provides six powerful tools for database operations:
 #### 4. **update** - Update Records
 ```json
 {
-  "table": "users",
-  "data": { "email": "newemail@example.com" },
-  "where": { "id": 1 }
+  "table": "employees",
+  "data": { "hire_date": "2024-02-01" },
+  "where": { "emp_no": 500000 }
 }
 ```
 
 #### 5. **delete** - Delete Records
 ```json
 {
-  "table": "users",
-  "where": { "id": 1 }
+  "table": "employees",
+  "where": { "emp_no": 500000 }
 }
 ```
 
 #### 6. **readSchema** - Inspect Database Schema
 ```json
 {
-  "table": "users"  // Optional - omit for all tables
+  "table": "employees"
 }
 ```
 
@@ -401,7 +432,7 @@ Thanks to Bun's optimized runtime:
 ## 📞 Support
 
 For issues and questions:
-- Open an issue on [GitHub Issues](https://github.com/yourusername/bun-db-mcp/issues)
+- Open an issue on [GitHub Issues](https://github.com/ross-jill-ws/bun-db-mcp/issues)
 - Check existing issues for solutions
 - Provide detailed error messages and steps to reproduce
 
