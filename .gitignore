@@ -176,3 +176,6 @@ dist
 .claude/*.local.json
 
 temp
+.pi
+.prompts
+

@@ -198,7 +198,27 @@ export async function startHTTPServer(port: number) {
       console.error(`Establishing new SSE stream for session ${sessionId}`);
     }
 
+    // Keep the SSE stream alive indefinitely — MCP notification streams are long-lived
+    req.socket.setTimeout(0);
+    req.socket.setKeepAlive(true);
+    res.setTimeout(0);
+
+    // Heartbeat so idle-timeout proxies (and clients) keep the stream open
+    const heartbeat = setInterval(() => {
+      try { res.write(': ping\n\n'); } catch { /* noop */ }
+    }, 25_000);
+
     const transport = httpTransports.get(sessionId)!;
+    req.on('close', () => {
+      clearInterval(heartbeat);
+      // Client disconnected — drop the transport so stale sessions don't wedge subsequent requests
+      if (httpTransports.has(sessionId)) {
+        console.error(`SSE client disconnected for session ${sessionId}, cleaning up transport`);
+        transport.close().catch(() => {});
+        httpTransports.delete(sessionId);
+      }
+    });
+
     await transport.handleRequest(req, res);
   };
 
@@ -266,7 +286,7 @@ export async function startHTTPServer(port: number) {
     app.delete('/mcp', mcpDeleteHandler);
   }
 
-  app.listen(MCP_PORT, () => {
+  const httpServer = app.listen(MCP_PORT, () => {
     console.error(`Database MCP StreamableHTTP server running on http://localhost:${MCP_PORT}`);
     console.error(`Endpoint: POST http://localhost:${MCP_PORT}/mcp`);
     console.error(`Session management via Mcp-Session-Id header`);
@@ -275,4 +295,10 @@ export async function startHTTPServer(port: number) {
       console.error(`Use --oauth-strict for stricter resource validation`);
     }
   });
+
+  // Disable Node's default HTTP timeouts — MCP streams are long-lived
+  httpServer.requestTimeout = 0;
+  httpServer.headersTimeout = 0;
+  httpServer.keepAliveTimeout = 0;
+  httpServer.timeout = 0;
 }
